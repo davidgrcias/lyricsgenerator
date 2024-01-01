@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/vara@1.4.0/lib/vara.min.js"></script>
+  </head>
+  <style>
+    body {
+      background: linear-gradient(to bottom, #3498db, #1abc9c) no-repeat fixed;
+    }
+    #container {
+      width: 100%;
+      margin: 50px auto;
+      height: 500px;
+    }
+    #lyricsForm {
+      background-color: #fff;
+      padding: 1px 20px 30px 20px;
+      border-radius: 10px;
+      margin: 20px;
+    }
+  </style>
+  <body>
+    <div id="lyricsForm">
+      <h1>Lyrics Generator</h1>
+      <!-- input lyrics -->
+      <form autocomplete="off">
+        <label>Enter Lyric :</label>
+        <input type="text" id="lyricInput" />
+        <label>Delay :</label>
+        <input type="number" id="delayInput" />
+        <label>Duration :</label>
+        <input type="number" id="durationInput" />
+        <button type="button" onclick="addLyric()">Add Lyric</button>
+      </form>
+
+      <h2>Lyrics List</h2>
+      <!-- display added lyrics -->
+      <table id="lyricsTable" border="1" cellpadding="10" cellspacing="0">
+        <thead>
+          <tr>
+            <th>Lyric</th>
+            <th>Delay</th>
+            <th>Duration</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <!-- start lyrics animation button -->
+      <button type="button" onclick="startLyrics()" style="margin-top: 10px">
+        Start Lyrics
+      </button>
+    </div>
+
+    <div id="container"></div>
+
+    <script>
+      // global variables
+      var lyricsTimeout;
+      var vara;
+      var lyricsQueue = [];
+      var lyricsTable = [];
+
+      // add lyric to the table
+      function addLyric() {
+        var lyricInput = document.getElementById("lyricInput").value;
+        var delayInput = document.getElementById("delayInput").value;
+        var durationInput = document.getElementById("durationInput").value;
+
+        var lyric = {
+          text: lyricInput,
+          delay: delayInput,
+          duration: durationInput,
+        };
+
+        lyricsTable.push(lyric);
+        displayLyrics();
+      }
+
+      // display lyric
+      function displayLyrics() {
+        var tableBody = document.querySelector("#lyricsTable tbody");
+        tableBody.innerHTML = "";
+
+        lyricsTable.forEach(function (lyric, index) {
+          var row = tableBody.insertRow();
+          row.id = `row-${index}`;
+
+          var cell1 = row.insertCell(0);
+          cell1.innerHTML = lyric.text;
+
+          var cell2 = row.insertCell(1);
+          cell2.innerHTML = lyric.delay;
+
+          var cell3 = row.insertCell(2);
+          cell3.innerHTML = lyric.duration;
+
+          var cell4 = row.insertCell(3);
+          var editButton = document.createElement("button");
+          editButton.textContent = "Edit";
+          editButton.onclick = function () {
+            editLyric(index);
+          };
+          cell4.appendChild(editButton);
+
+          var deleteButton = document.createElement("button");
+          deleteButton.textContent = "Delete";
+          deleteButton.onclick = function () {
+            lyricsTable.splice(index, 1);
+            displayLyrics();
+          };
+          cell4.appendChild(deleteButton);
+        });
+      }
+
+      // edit lyric in the table
+      function editLyric(index) {
+        var row = document.getElementById(`row-${index}`);
+
+        var cells = row.cells;
+        cells[0].innerHTML = `<input type="text" value="${lyricsTable[index].text}" id="editLyricText">`;
+        cells[1].innerHTML = `<input type="number" value="${lyricsTable[index].delay}" id="editLyricDelay">`;
+        cells[2].innerHTML = `<input type="number" value="${lyricsTable[index].duration}" id="editLyricDuration">`;
+
+        var saveButton = document.createElement("button");
+        saveButton.textContent = "Save";
+        saveButton.onclick = function () {
+          saveLyric(index);
+        };
+        cells[3].appendChild(saveButton);
+      }
+
+      // save edited lyric
+      function saveLyric(index) {
+        var editedLyricText = document.getElementById("editLyricText").value;
+        var editedLyricDelay = document.getElementById("editLyricDelay").value;
+        var editedLyricDuration =
+          document.getElementById("editLyricDuration").value;
+
+        lyricsTable[index].text = editedLyricText;
+        lyricsTable[index].delay = editedLyricDelay;
+        lyricsTable[index].duration = editedLyricDuration;
+
+        displayLyrics();
+      }
+
+      // start lyrics animation
+      function startLyrics() {
+        var totalDuration = 0;
+
+        document.querySelector("#container").innerHTML = "";
+
+        var tableRows = document.querySelectorAll("#lyricsTable tbody tr");
+
+        tableRows.forEach(function (row) {
+          var cells = row.cells;
+          var lyric = {
+            text: cells[0].textContent,
+            delay: parseInt(cells[1].textContent) * 1000,
+            duration: parseInt(cells[2].textContent) * 1000,
+            y: 150,
+            fromCurrentPosition: { y: false },
+          };
+
+          var time = lyric.delay + lyric.duration;
+          totalDuration += time;
+          lyricsQueue.push(lyric);
+        });
+
+        var container = "#container";
+        var fontJSON =
+          "https://raw.githubusercontent.com/akzhy/Vara/master/fonts/Pacifico/PacificoSLO.json";
+
+        var options = {
+          strokeWidth: 2,
+          color: "#fff",
+          fontSize: 60,
+          textAlign: "center",
+        };
+
+        vara = new Vara(container, fontJSON, lyricsQueue, options);
+
+        vara.ready(function () {
+          var erase = true;
+          vara.animationEnd(function (i, o) {
+            if (i == "no_erase") erase = false;
+            if (erase) {
+              o.container.style.transition = "opacity 1s 1s";
+              o.container.style.opacity = 0;
+            }
+          });
+        });
+
+        lyricsTimeout = setTimeout(function () {
+          document.getElementById("lyricsForm").style.display = "block";
+          lyricsQueue = [];
+        }, totalDuration + 2500);
+
+        document.getElementById("lyricsForm").style.display = "none";
+      }
+
+      // Press ctrl and x to stop the lyrics animation
+      document.onkeyup = function (e) {
+        if (e.ctrlKey && e.which === 88) {
+          stopLyrics();
+        }
+      };
+
+      function stopLyrics() {
+        document.querySelector("#container").innerHTML = "";
+        clearTimeout(lyricsTimeout);
+        document.getElementById("lyricsForm").style.display = "block";
+        lyricsQueue = [];
+      }
+    </script>
+  </body>
+</html>
