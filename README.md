@@ -1,2 +1,0 @@
-# lyricsgenerator
-lyricsgenerator
